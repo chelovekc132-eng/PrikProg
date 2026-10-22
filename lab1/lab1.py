@@ -4,23 +4,27 @@ from datetime import date
 
 BAD = "-"
 
-NAME_RE = re.compile(r'[А-ЯЁA-Z][а-яёa-z]*(?:-[А-ЯЁA-Z][а-яёa-z]*)?')
-SEX_RE = re.compile(r'([Мм](?:ужской)?)|([Жж](?:енский)?)')
-DATE_RE = re.compile(r'(\d{1,2})([/.-])(\d{1,2})\2(\d{4})')
-PHONE_RE = re.compile(r'(?:8|\+7) ?(?:\(\d{3}\)|\d{3}) ?\d{3}[- ]?\d{2}[- ]?\d{2}')
+FAMILIYA_RE = re.compile(r'[А-ЯЁA-Z][а-яёa-z]*(?:-[А-ЯЁA-Z][а-яёa-z]*)?')
+IMYA_RE = re.compile(r'[А-ЯЁA-Z][а-яёa-z]*(?:-[А-ЯЁA-Z][а-яёa-z]*)?')
+POL_RE = re.compile(r'([Мм](?:ужской)?)|([Жж](?:енский)?)')
+DATA_RE = re.compile(r'(\d{1,2})([/.-])(\d{1,2})\2(\d{4})')
+TELEPHON_RE = re.compile(r'(?:8|\+7) ?(?:\(\d{3}\)|\d{3}) ?\d{3}[- ]?\d{2}[- ]?\d{2}')
 EMAIL_RE = re.compile(r'[A-Za-z0-9._%+-]{1,64}@(?:gmail\.com|mail\.ru|yandex\.ru)')
-CITY_RE = re.compile(r'(?:г\. ?)?([А-ЯЁ][а-яё]+(?:[- ][А-ЯЁ][а-яё]+)*)')
+GOROD_RE = re.compile(r'(?:г\. ?)?([А-ЯЁ][а-яё]+(?:[- ][А-ЯЁ][а-яё]+)*)')
 
-def fix_name(s):
-    return s if NAME_RE.fullmatch(s) else BAD
+def fix_familiya(s):
+    return s if FAMILIYA_RE.fullmatch(s) else BAD
 
-def fix_sex(s):
-    m = SEX_RE.fullmatch(s)
+def fix_imya(s):
+    return s if IMYA_RE.fullmatch(s) else BAD
+
+def fix_pol(s):
+    m = POL_RE.fullmatch(s)
     if not m: return BAD
     return "М" if m.group(1) else "Ж"
 
-def fix_date(s):
-    m = DATE_RE.fullmatch(s)
+def fix_data(s):
+    m = DATA_RE.fullmatch(s)
     if not m: return BAD
     day, month, year = int(m.group(1)), int(m.group(3)), int(m.group(4))
     today = date.today()
@@ -33,7 +37,7 @@ def fix_date(s):
     return f"{day:02d}.{month:02d}.{year}"
 
 def fix_contact(s):
-    if PHONE_RE.fullmatch(s):
+    if TELEPHON_RE.fullmatch(s):
         digits = re.sub(r'\D', '', s)
         digits = '8' + digits[1:]
         return f"8 ({digits[1:4]}) {digits[4:7]}-{digits[7:9]}-{digits[9:11]}"
@@ -41,11 +45,11 @@ def fix_contact(s):
         return s
     return BAD
 
-def fix_city(s):
-    m = CITY_RE.fullmatch(s)
+def fix_gorod(s):
+    m = GOROD_RE.fullmatch(s)
     return f"г. {m.group(1)}" if m else BAD
 
-FIXERS = [fix_name, fix_name, fix_sex, fix_date, fix_contact, fix_city]
+FIXERS = [fix_familiya, fix_imya, fix_pol, fix_data, fix_contact, fix_gorod]
 
 def clean_line(line):
     line = line.strip()
