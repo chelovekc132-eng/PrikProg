@@ -51,7 +51,6 @@ def clean_line(line):
     line = line.strip()
     if ':' in line:
         parts = line.split(':', 1)
-        # Проверяем, что слева именно название поля, а не что-то другое
         if parts[0].strip() in ["Фамилия", "Имя", "Пол", "Дата рождения", "Номер телефона или email", "Город"]:
             return parts[1].strip()
     return line
@@ -64,34 +63,28 @@ def main():
     with open(args.filename, "r", encoding="utf-8") as f:
         lines = f.readlines()
 
-    # 1. Очищаем все строки от пробелов и префиксов
     cleaned_lines = []
     for line in lines:
         if line.strip():
             cleaned_lines.append(clean_line(line))
 
-    # 2. Ищем начало каждой анкеты (строки, которые начинаются с цифры и скобки, например "1)")
     records = []
     current_record = []
     
     for line in cleaned_lines:
         if re.match(r'^\d+\)', line):
-            # Если встретили новый номер, сохраняем предыдущую анкету
             if current_record:
                 records.append(current_record)
-            current_record = [] # начинаем новую
+            current_record = []
         else:
             current_record.append(line)
             
-    # Добавляем последнюю анкету
     if current_record:
         records.append(current_record)
 
-    # Если по какой-то причине нумераторы не распознались, нарезаем просто по 6 строк
     if not records or len(records[0]) != 6:
         records = [cleaned_lines[i:i + 6] for i in range(0, len(cleaned_lines), 6)]
 
-    # 3. Применяем фиксы
     result = []
     for rec in records:
         rec = rec + [BAD] * (6 - len(rec))
