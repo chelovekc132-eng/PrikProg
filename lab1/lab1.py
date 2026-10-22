@@ -2,8 +2,6 @@ import argparse
 import re
 from datetime import date
 
-# единый шаблон на выходе:
-# Фамилия, Имя, пол М/Ж, дата ДД.ММ.ГГГГ, телефон 8 (012) 345-67-89, город "г. Москва"
 BAD = "-"
 
 NAME_RE = re.compile(r'[А-ЯЁA-Z][а-яёa-z]*(?:-[А-ЯЁA-Z][а-яёa-z]*)?')
@@ -34,7 +32,7 @@ def fix_date(s):
     if not 1900 <= year <= today.year:
         return BAD
     try:
-        d = date(year, month, day)  # заодно проверит дни/месяцы (и 30 февраля)
+        d = date(year, month, day)
     except ValueError:
         return BAD
     if d > today:
@@ -45,7 +43,7 @@ def fix_date(s):
 def fix_contact(s):
     if PHONE_RE.fullmatch(s):
         digits = re.sub(r'\D', '', s)
-        digits = '8' + digits[1:]  # +7 -> 8
+        digits = '8' + digits[1:]
         return f"8 ({digits[1:4]}) {digits[4:7]}-{digits[7:9]}-{digits[9:11]}"
     if EMAIL_RE.fullmatch(s):
         return s
@@ -60,18 +58,36 @@ def fix_city(s):
 FIXERS = [fix_name, fix_name, fix_sex, fix_date, fix_contact, fix_city]
 
 
+def clean_field(line):
+    if ':' in line:
+        return line.split(':', 1)[1].strip()
+    return line.strip()
+
+
 def read_records(text):
-    """Возвращает (список анкет, True если каждая анкета в одной строке)."""
     lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
     if not lines:
         return [], False
 
-    # вариант 1: вся анкета в одной строке через запятую / точку с запятой
     if len(re.split(r'\s*[,;]\s*', lines[0])) == 6:
         return [re.split(r'\s*[,;]\s*', ln) for ln in lines], True
 
-    # вариант 2: по одному полю на строку, анкеты идут по 6 строк
-    records = [lines[i:i + 6] for i in range(0, len(lines), 6)]
+    blocks = re.split(r'^\s*\d+\)\s*$', text, flags=re.MULTILINE)
+
+    records = []
+    for block in blocks:
+        fields = []
+        for ln in block.splitlines():
+            ln = ln.strip()
+            if ln:
+                fields.append(clean_field(ln))
+        if fields:
+            records.append(fields)
+
+    if len(records) == 1 and len(records[0]) > 6:
+        flat = records[0]
+        records = [flat[i:i + 6] for i in range(0, len(flat), 6)]
+
     return records, False
 
 
@@ -94,8 +110,8 @@ def main():
 
     result = []
     for rec in records:
-        rec = rec + [BAD] * (6 - len(rec))  # если полей не хватило
-        fixed = [fix(field.strip()) for fix, field in zip(FIXERS, rec)]
+        rec = rec + [BAD] * (6 - len(rec))
+        fixed = [fix(field) for fix, field in zip(FIXERS, rec)]
         if one_line:
             result.append(", ".join(fixed))
         else:
